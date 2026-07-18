@@ -5,6 +5,9 @@
 #include <memory>
 #include <random>
 
+#include <iostream>
+#include <iomanip>
+
 namespace funn{
 
 template <typename T>
@@ -36,6 +39,12 @@ num RandInitWeights(){
     std::uniform_real_distribution<double>dist(-1.0,1.0);
     return num(dist(gen));
 }
+
+template<Number num = double>
+struct Data{
+    const std::vector<num>&inputs;
+    num expected{};
+};
 
 template<Number num = double>
 struct NN{
@@ -72,11 +81,26 @@ struct NN{
         ) : lsize(lsize), ins(in),
         activationFunction(activFunc),
         neuronInitFunction(initFunc) {
-            neurons.assign(lsize,Neuron(in, initFunc, defaultNeuronValue, defaultNeuronBias));
+            for(size_t i{};i<lsize;i++)
+                neurons.emplace_back(Neuron(in, initFunc, defaultNeuronValue, defaultNeuronBias));
+        }
+
+        void printNeurons(){
+            int i{};
+            for(auto& n:neurons){
+                i++;
+                std::cout<<"Neuron "<<i<<" value: "<<n.value<<", bias: "<<n.bias<<",\nweights: { ";
+                for(auto w:n.weights) std::cout<<std::fixed<<std::setprecision(3)<<w<<' ';
+                std::cout<<"}\n\n";
+            }
         }
     };
 
+    size_t input_size;
+    size_t output_size;
     std::vector<Layer>layers;
+
+    // make another constructor which accepts all the other params
 
     NN(
         std::vector<size_t>layer_sizes
@@ -87,6 +111,10 @@ struct NN{
                 (i==0) ? 0 : layer_sizes[i-1] 
             ));
         }
+    }
+
+    void calc(){
+        
     }
 };
 
