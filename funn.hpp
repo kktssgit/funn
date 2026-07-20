@@ -4,6 +4,7 @@
 #include <cmath>
 #include <memory>
 #include <random>
+#include <cassert>
 
 #include <iostream>
 #include <iomanip>
@@ -42,8 +43,13 @@ num RandInitWeights(){
 
 template<Number num = double>
 struct Data{
-    const std::vector<num>&inputs;
-    num expected{};
+    std::vector<num>input;
+    num expected;
+};
+
+template<Number num = double>
+struct Output{
+    std::vector<num>output;
 };
 
 template<Number num = double>
@@ -96,15 +102,20 @@ struct NN{
         }
     };
 
-    size_t input_size;
-    size_t output_size;
+    size_t layers_amount{};
+    size_t input_size{};
+    size_t output_size{};
     std::vector<Layer>layers;
 
     // make another constructor which accepts all the other params
 
-    NN(
-        std::vector<size_t>layer_sizes
-    ){
+    NN( // will fail if layer_sizes is empty i think
+        const std::vector<size_t>&layer_sizes
+    ) : 
+        input_size(layer_sizes.front()),
+        output_size(layer_sizes.back()),
+        layers_amount(layer_sizes.size())
+    {
         for(size_t i{};i<layer_sizes.size();i++){
             layers.emplace_back(Layer(
                 layer_sizes[i],
@@ -113,8 +124,33 @@ struct NN{
         }
     }
 
-    void calc(){
-        
+    Output<num> calc(const Data<num>& data){
+        auto& in = data.input;
+
+        assert(in.size() == input_size);
+
+        Output out{std::vector<num>()};
+
+        for(auto layer_p = layers.begin(); layer_p != layers.end(); layer_p++){
+            if(layer_p == layers.begin()){
+                size_t n_i{};
+                for(auto& neuron : layer_p->neurons) neuron.value = in[n_i++];
+                continue;
+            }
+
+            auto prev_layer = layer_p; prev_layer--;
+
+            for(auto& neuron : layer_p->neurons){
+                neuron.value = neuron.bias;
+                for(size_t i{};i<prev_layer->neurons.size();i++)
+                    neuron.value += prev_layer->neurons[i].value * neuron.weights[i];
+                neuron.value = layer_p->activationFunction(neuron.value);
+            }
+        }
+
+        for(const auto& neuron : layers.back().neurons) out.output.push_back(neuron.value);
+
+        return out;
     }
 };
 
