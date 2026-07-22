@@ -233,8 +233,8 @@ struct NN{
                 } else {
                     auto next_layer = layer_p-1;
 
+                    size_t k_i{};
                     for(auto& neuron:layer_p->neurons){
-                        size_t k_i{};
                         
                         num error_sum = num(0.0);
                         for(auto& next_neuron:next_layer->neurons){
