@@ -38,8 +38,19 @@ num ReLU(num x){
 }
 
 template<Number num = double>
-num ReLU_derivative(num x){
+num ReLU_dx(num x){
     return x>0?1:0;
+}
+
+template<Number num = double>
+num Sigmoid2(num x){
+    return (2.0 / (1.0 + std::exp(-x))) - 1.0;
+}
+
+template<Number num = double>
+num Sigmoid2_dx(num x){
+    num y = Sigmoid2(x);
+    return (1.0 - y * y) / 2.0;
 }
 
 template<Number num = double>
@@ -51,7 +62,7 @@ template<Number num = double>
 num RandInitWeights(){
     static std::random_device rd;
     static std::mt19937 gen(rd());
-    std::uniform_real_distribution<double>dist(-1.0,1.0);
+    std::uniform_real_distribution<double>dist(-0.5,0.5);
     return num(dist(gen));
 }
 
@@ -69,8 +80,8 @@ num diffSquared_dx(num predicted, num expected){
 
 template<Number num = double>
 struct Data{
-    std::vector<num>input;
-    std::vector<num>expected;
+    std::vector<num>input{};
+    std::vector<num>expected{};
 };
 
 template<Number num = double>
@@ -93,13 +104,11 @@ struct NN{
 
         Neuron(
             size_t wsize,
-            num(*initFunc)(),
-            num v,
-            num b)
-        : value(v), bias(b){
+            num(*initFunc)() ) {
             weights.resize(wsize);
             weight_gradients.assign(wsize,num(0.0));
             for(auto& i:weights) i = initFunc();
+            bias = initFunc();
         }
     };
     
@@ -116,16 +125,14 @@ struct NN{
             size_t lsize,
             size_t in,
             num(*activFunc)(num) = ReLU<num>,
-            num(*activFuncDx)(num) = ReLU_derivative<num>,
-            num(*initFunc)() = RandInitWeights<num>,
-            num defaultNeuronBias = num{},
-            num defaultNeuronValue = num{}
+            num(*activFuncDx)(num) = ReLU_dx<num>,
+            num(*initFunc)() = RandInitWeights<num>
         ) : lsize(lsize), ins(in),
         activationFunction(activFunc),
         activationFunction_dx(activFuncDx)
         /* neuronInitFunction(initFunc) */ {
             for(size_t i{};i<lsize;i++)
-                neurons.emplace_back(Neuron(in, initFunc, defaultNeuronValue, defaultNeuronBias));
+                neurons.emplace_back(Neuron(in, initFunc));
         }
 
         void printNeurons(){
@@ -153,7 +160,9 @@ struct NN{
     NN( // will fail if layer_sizes is empty i think
         const std::vector<size_t>&layer_sizes,
         num(*lossFun)(num,num) = diffSquared<>,
-        num(*lossFunDx)(num,num) = diffSquared_dx<>
+        num(*lossFunDx)(num,num) = diffSquared_dx<>,
+        num(*activFunDefault)(num) = ReLU<>,
+        num(*activFunDefaultDx)(num) = ReLU_dx<>
     ) : 
         input_size(layer_sizes.front()),
         output_size(layer_sizes.back()),
@@ -164,9 +173,13 @@ struct NN{
         for(size_t i{};i<layer_sizes.size();i++){
             layers.emplace_back(Layer(
                 layer_sizes[i],
-                (i==0) ? 0 : layer_sizes[i-1] 
+                (i==0) ? 0 : layer_sizes[i-1],
+                activFunDefault,
+                activFunDefaultDx
             ));
         }
+        for(auto& neuron:layers.front().neurons)
+            neuron.value = neuron.value_pa = neuron.bias = num(0.0);
 
         loss.assign(output_size,num(0.0));
     }
