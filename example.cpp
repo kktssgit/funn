@@ -13,9 +13,17 @@ double Linear_dx(double x){
     return 1;
 }
 
+double Sin(double x){
+    return sin(x);
+}
+
+double Sin_dx(double x){
+    return cos(x);
+}
+
 int main(){
 
-    funn::NN<> nn({1,64,64,64,1},
+    funn::NN<> nn({1,200,1},
     funn::diffSquared<>,funn::diffSquared_dx<>,
     funn::Sigmoid2<>,   funn::Sigmoid2_dx<>);
 
